@@ -40,14 +40,13 @@ DallasTemperature sensors(&oneWire);
 **************************************/
 void setRelayState();
 
-// Assign the addresses of your 1-Wire temp sensors.
-// See the tutorial on how to obtain these addresses:
-// http://www.hacktronics.com/Tutorials/arduino-1-wire-address-finder.html
 DeviceAddress seedThermometer = { 0x28, 0x94, 0xE2, 0xDF, 0x02, 0x00, 0x00, 0xFE };
 void setup()
 {
+  Serial.begin(9600);
+
   windowStartTime = millis();
-  Setpoint = 100;
+  Setpoint = 77.0f;
   myPID.SetOutputLimits(0, WindowSize);
   myPID.SetMode(AUTOMATIC);
 
@@ -62,7 +61,7 @@ void loop()
   if (tempC == -127.00) {
     Serial.print("Error getting temperature");
   } else {
-    Input = tempC;
+    Input = DallasTemperature::toFahrenheit(tempC);
   }
 
   myPID.Compute();
@@ -77,5 +76,4 @@ void setRelayState()
   }
   if(Output < millis() - windowStartTime) digitalWrite(HeatMatRelay,HIGH);
   else digitalWrite(HeatMatRelay,LOW);
-
 }

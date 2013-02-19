@@ -8,4 +8,6 @@ build-mega2560/SeedStation.o: build-mega2560/SeedStation.cpp \
   /Applications/Arduino.app/Contents/Resources/Java/hardware/arduino/cores/arduino/Print.h \
   /Applications/Arduino.app/Contents/Resources/Java/hardware/arduino/cores/arduino/Printable.h \
   /Applications/Arduino.app/Contents/Resources/Java/hardware/arduino/cores/arduino/new.h \
-  /Applications/Arduino.app/Contents/Resources/Java/hardware/arduino/variants/mega/pins_arduino.h
+  /Applications/Arduino.app/Contents/Resources/Java/hardware/arduino/variants/mega/pins_arduino.h \
+  ../OneWire/OneWire.h ../DallasTemperature/DallasTemperature.h \
+  ../Arduino-PID-Library/PID_v1/PID_v1.h

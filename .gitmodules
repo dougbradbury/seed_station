@@ -1,3 +1,9 @@
 [submodule "Arduino-Makefile"]
 	path = Arduino-Makefile
 	url = https://github.com/mjoldfield/Arduino-Makefile.git
+[submodule "Arduino-PID-Library"]
+	path = Arduino-PID-Library
+	url = https://github.com/br3ttb/Arduino-PID-Library.git
+[submodule "Arduino-PID-AutoTune-Library"]
+	path = Arduino-PID-AutoTune-Library
+	url = git@github.com:br3ttb/Arduino-PID-AutoTune-Library.git

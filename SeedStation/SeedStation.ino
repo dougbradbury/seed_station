@@ -17,8 +17,6 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <PID_v1.h>
-#define HeatMatRelay 6
-#define OneWireBus 3
 
 /**************************************
 *  PID
@@ -31,16 +29,39 @@ unsigned long windowStartTime;
 /**************************************
 *  TEMP SENSOR
 **************************************/
+#define OneWireBus 3
 OneWire oneWire(OneWireBus);
 DallasTemperature sensors(&oneWire);
-
+DeviceAddress seedThermometer = { 0x28, 0x5C, 0x8D, 0x3F, 0x03, 0x00, 0x00, 0x5C };
 
 /**************************************
 *  RELAY CONTROL
 **************************************/
+#define HeatMatRelay 6
 void setRelayState();
 
-DeviceAddress seedThermometer = { 0x28, 0x94, 0xE2, 0xDF, 0x02, 0x00, 0x00, 0xFE };
+/**************************************
+*  SCHDEULE
+**************************************/
+// union value {
+//   int i;
+//   float f;
+//   bool b;
+// }
+//
+// struct event {
+//   int hour;
+//   int minute;
+//   int seconds;
+//   *(void function(value *))
+//   value param;
+// }
+// schedule = [
+//  [0, setTemp, 77]
+//  [1, setTemp, 65]
+// ]
+//
+//
 void setup()
 {
   Serial.begin(9600);
@@ -62,6 +83,8 @@ void loop()
     Serial.print("Error getting temperature");
   } else {
     Input = DallasTemperature::toFahrenheit(tempC);
+    Serial.print(Input);
+    Serial.print("\n");
   }
 
   myPID.Compute();
@@ -70,10 +93,17 @@ void loop()
 
 void setRelayState()
 {
+
   if(millis() - windowStartTime>WindowSize)
   { //time to shift the Relay Window
     windowStartTime += WindowSize;
   }
-  if(Output < millis() - windowStartTime) digitalWrite(HeatMatRelay,HIGH);
-  else digitalWrite(HeatMatRelay,LOW);
+  if(Output < millis() - windowStartTime) {
+    digitalWrite(HeatMatRelay,HIGH);
+    Serial.print("High");
+  }
+  else {
+    digitalWrite(HeatMatRelay,LOW);
+    Serial.print("Low");
+  }
 }

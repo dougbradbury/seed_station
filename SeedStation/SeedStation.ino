@@ -17,19 +17,27 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <PID_v1.h>
+#include <PID_AutoTune_v0.h>
 
 /**************************************
 *  PID
 **************************************/
 double Setpoint, Input, Output;
-PID myPID(&Input, &Output, &Setpoint,2,5,1, DIRECT);
+double kp=2,ki=0.5,kd=2;
+PID_ATune aTune(&Input, &Output);
+PID myPID(&Input, &Output, &Setpoint, kp, ki, kd, DIRECT);
 int WindowSize = 5000;
 unsigned long windowStartTime;
+void AutoTuneHelper(boolean start);
+byte ATuneModeRemember=2;
+boolean tuning = false;
+void doPid();
 
 /**************************************
 *  TEMP SENSOR
 **************************************/
 #define OneWireBus 3
+bool readTemp(double *);
 OneWire oneWire(OneWireBus);
 DallasTemperature sensors(&oneWire);
 DeviceAddress seedThermometer = { 0x28, 0x5C, 0x8D, 0x3F, 0x03, 0x00, 0x00, 0x5C };
@@ -37,37 +45,18 @@ DeviceAddress seedThermometer = { 0x28, 0x5C, 0x8D, 0x3F, 0x03, 0x00, 0x00, 0x5C
 /**************************************
 *  RELAY CONTROL
 **************************************/
-#define HeatMatRelay 6
+#define HeatMatRelay 5
 void setRelayState();
 
-/**************************************
-*  SCHDEULE
-**************************************/
-// union value {
-//   int i;
-//   float f;
-//   bool b;
-// }
-//
-// struct event {
-//   int hour;
-//   int minute;
-//   int seconds;
-//   *(void function(value *))
-//   value param;
-// }
-// schedule = [
-//  [0, setTemp, 77]
-//  [1, setTemp, 65]
-// ]
-//
-//
 void setup()
 {
+  pinMode(HeatMatRelay, OUTPUT);
+  pinMode(OneWireBus, INPUT);
+  digitalWrite(OneWireBus, HIGH);
   Serial.begin(9600);
 
   windowStartTime = millis();
-  Setpoint = 77.0f;
+  Setpoint = 72.0f;
   myPID.SetOutputLimits(0, WindowSize);
   myPID.SetMode(AUTOMATIC);
 
@@ -77,33 +66,82 @@ void setup()
 
 void loop()
 {
+  if (readTemp(&Input)) {
+    doPid();
+    //myPID.Compute();
+    setRelayState();
+  }
+}
+
+bool readTemp(double * temp)
+{
   sensors.requestTemperatures();
   float tempC = sensors.getTempC(seedThermometer);
   if (tempC == -127.00) {
     Serial.print("Error getting temperature");
-  } else {
-    Input = DallasTemperature::toFahrenheit(tempC);
-    Serial.print(Input);
-    Serial.print("\n");
+    return false;
   }
+  else {
+    *temp = DallasTemperature::toFahrenheit(tempC);
+    return true;
+  }
+}
 
-  myPID.Compute();
-  setRelayState();
+void doPid()
+{
+  if(tuning)
+  {
+    byte val = (aTune.Runtime());
+    if (val!=0)
+    {
+      tuning = false;
+    }
+    if(!tuning)
+    { //we're done, set the tuning parameters
+      kp = aTune.GetKp();
+      ki = aTune.GetKi();
+      kd = aTune.GetKd();
+      Serial.print("Tuning Complete:\n");
+      Serial.print("kp: ");
+      Serial.print(kp);
+      Serial.print("\nki: ");
+      Serial.print(ki);
+      Serial.print("\nkd: ");
+      Serial.print(kd);
+      Serial.print("\n");
+      myPID.SetTunings(kp,ki,kd);
+      AutoTuneHelper(false);
+    }
+  }
+  else myPID.Compute();
+}
+
+void AutoTuneHelper(boolean start)
+{
+  if(start)
+    ATuneModeRemember = myPID.GetMode();
+  else
+    myPID.SetMode(ATuneModeRemember);
 }
 
 void setRelayState()
 {
-
-  if(millis() - windowStartTime>WindowSize)
-  { //time to shift the Relay Window
+  unsigned long now = millis();
+  unsigned long timeInWindow = now - windowStartTime;
+  if ( timeInWindow > WindowSize )
+  {
+    Serial.print(Output);
+    Serial.print(" | ");
+    Serial.print(Input);
+    Serial.print("\n");
     windowStartTime += WindowSize;
+    timeInWindow = now - windowStartTime;
   }
-  if(Output < millis() - windowStartTime) {
+
+  if ( timeInWindow <= Output ) {
     digitalWrite(HeatMatRelay,HIGH);
-    Serial.print("High");
   }
   else {
     digitalWrite(HeatMatRelay,LOW);
-    Serial.print("Low");
   }
 }
